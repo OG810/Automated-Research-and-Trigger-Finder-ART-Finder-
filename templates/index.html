@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Research</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        input[type="text"] {
+            width: 300px;
+            padding: 10px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .section {
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table th, table td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        table th {
+            background-color: #f4f4f4;
+        }
+        .chart-container {
+            width: 80%;
+            margin: 20px auto;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Product Research</h1>
+    <p>Enter a product name to see research data from YouTube and Reddit.</p>
+    <input type="text" id="productInput" placeholder="Enter product name">
+    <button onclick="fetchResearch()">Search</button>
+
+    <div class="results" id="results">
+        <!-- Research results, tables, and charts will be displayed here -->
+    </div>
+
+    <script>
+        function fetchResearch() {
+            const productInput = document.getElementById('productInput').value.trim();
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '';
+
+            if (!productInput) {
+                resultsDiv.innerHTML = '<p class="error">Please enter a product name.</p>';
+                return;
+            }
+
+            // Fetch research data from the backend
+            fetch(`/research/${encodeURIComponent(productInput)}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Display YouTube data in a table
+                    if (data.youtube_data && data.youtube_data.length > 0) {
+                        const youtubeSection = document.createElement('div');
+                        youtubeSection.className = 'section';
+                        youtubeSection.innerHTML = `
+                            <h2>YouTube Data</h2>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>URL</th>
+                                        <th>Views</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.youtube_data.map(video => `
+                                        <tr>
+                                            <td>${video.title}</td>
+                                            <td><a href="${video.url}" target="_blank">Watch</a></td>
+                                            <td>${video.views}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        `;
+                        resultsDiv.appendChild(youtubeSection);
+
+                        // Create a chart for YouTube data
+                        const youtubeLabels = data.youtube_data.map(video => video.title);
+                        const youtubeViews = data.youtube_views;
+
+                        const youtubeChartCanvas = document.createElement('canvas');
+                        youtubeChartCanvas.id = 'youtubeChart';
+                        youtubeSection.appendChild(youtubeChartCanvas);
+
+                        new Chart(youtubeChartCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: youtubeLabels,
+                                datasets: [{
+                                    label: 'Views',
+                                    data: youtubeViews,
+                                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: {
+                                    legend: { display: true, position: 'top' },
+                                    tooltip: { callbacks: { label: context => `${context.raw} views` } }
+                                },
+                                scales: {
+                                    x: { title: { display: true, text: 'Videos' } },
+                                    y: { title: { display: true, text: 'Views' } }
+                                }
+                            }
+                        });
+                    } else {
+                        resultsDiv.innerHTML += '<p class="error">No YouTube data found for this product.</p>';
+                    }
+
+                    // Display Reddit data in a table
+                    if (data.reddit_data && data.reddit_data.length > 0) {
+                        const redditSection = document.createElement('div');
+                        redditSection.className = 'section';
+                        redditSection.innerHTML = `
+                            <h2>Reddit Data</h2>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>URL</th>
+                                        <th>Score</th>
+                                        <th>Comments</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.reddit_data.map(post => `
+                                        <tr>
+                                            <td>${post.title}</td>
+                                            <td><a href="${post.url}" target="_blank">View Post</a></td>
+                                            <td>${post.score}</td>
+                                            <td>${post.comments}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        `;
+                        resultsDiv.appendChild(redditSection);
+
+                        // Create a chart for Reddit data
+                        const redditLabels = data.reddit_data.map(post => post.title);
+                        const redditScores = data.reddit_scores;
+
+                        const redditChartCanvas = document.createElement('canvas');
+                        redditChartCanvas.id = 'redditChart';
+                        redditSection.appendChild(redditChartCanvas);
+
+                        new Chart(redditChartCanvas, {
+                            type: 'bar',
+                            data: {
+                                labels: redditLabels,
+                                datasets: [{
+                                    label: 'Scores',
+                                    data: redditScores,
+                                    backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                                    borderColor: 'rgba(255, 99, 132, 1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                plugins: {
+                                    legend: { display: true, position: 'top' },
+                                    tooltip: { callbacks: { label: context => `${context.raw} score` } }
+                                },
+                                scales: {
+                                    x: { title: { display: true, text: 'Posts' } },
+                                    y: { title: { display: true, text: 'Scores' } }
+                                }
+                            }
+                        });
+                    } else {
+                        resultsDiv.innerHTML += '<p class="error">No Reddit data found for this product.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching research data:', error);
+                    resultsDiv.innerHTML = '<p class="error">An error occurred while fetching research data.</p>';
+                });
+        }
+    </script>
+</body>
+</html>
